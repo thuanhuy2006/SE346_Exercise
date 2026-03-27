@@ -14,34 +14,22 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Hàm xử lý đăng nhập
   const handleLogin = async () => {
-    if (!email) {
-      Alert.alert("Thông báo", "Vui lòng nhập email!");
-      return;
-    }
-
+    if (!email) return Alert.alert("Thông báo", "Vui lòng nhập email!");
     try {
-      // 1. Tìm xem email này có trong hệ thống (AsyncStorage) không
       const storedUser = await AsyncStorage.getItem(`profile_${email}`);
-
       if (storedUser !== null) {
-        // Tài khoản có tồn tại
         const userData = JSON.parse(storedUser);
-
-        // 2. Kiểm tra xem mật khẩu có khớp không
         if (userData.password && userData.password !== password) {
-          Alert.alert("Lỗi", "Mật khẩu không chính xác!");
-          return;
+          return Alert.alert("Lỗi", "Mật khẩu không chính xác!");
         }
-
-        // 3. Đúng email & mật khẩu -> Chuyển sang trang Profile
-        router.push({ pathname: "/profile", params: { email: email } });
+        // Lưu phiên đăng nhập hiện tại
+        await AsyncStorage.setItem("currentUser", email);
+        router.replace("/(tabs)/home");
       } else {
-        // Tài khoản không tồn tại, hiện thông báo gợi ý tạo tài khoản
         Alert.alert(
           "Tài khoản không tồn tại",
-          "Email này chưa được đăng ký. Bạn có muốn tạo tài khoản mới không?",
+          "Email này chưa được đăng ký. Tạo tài khoản mới?",
           [
             { text: "Hủy", style: "cancel" },
             { text: "Đăng ký ngay", onPress: () => router.push("/register") },
@@ -49,7 +37,6 @@ export default function LoginScreen() {
         );
       }
     } catch (error) {
-      console.error(error);
       Alert.alert("Lỗi", "Đã xảy ra lỗi khi đăng nhập.");
     }
   };
@@ -57,7 +44,6 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Login</Text>
-
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Email</Text>
         <TextInput
@@ -68,7 +54,6 @@ export default function LoginScreen() {
           keyboardType="email-address"
         />
       </View>
-
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Password</Text>
         <TextInput
@@ -78,15 +63,12 @@ export default function LoginScreen() {
           secureTextEntry
         />
       </View>
-
       <View style={styles.linksContainer}>
         <Text style={styles.linkText}>Forgot password?</Text>
         <TouchableOpacity onPress={() => router.push("/register")}>
           <Text style={styles.linkTextBold}>Register</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Gắn hàm handleLogin vào nút Sign in */}
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>Sign in</Text>
       </TouchableOpacity>
