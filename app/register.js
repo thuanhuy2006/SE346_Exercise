@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -9,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { createUser, getUserByEmail } from "./database";
 
 export default function RegisterScreen() {
   const [name, setName] = useState("");
@@ -20,39 +20,22 @@ export default function RegisterScreen() {
     if (!email || !password)
       return Alert.alert("Thông báo", "Vui lòng nhập email và mật khẩu!");
     if (password !== confirmPassword)
-      return Alert.alert("Lỗi", "Mật khẩu xác nhận không khớp!");
+      return Alert.alert("Lỗi", "Mật khẩu không khớp!");
 
     try {
-      const existingUser = await AsyncStorage.getItem(`profile_${email}`);
-      if (existingUser !== null)
-        return Alert.alert("Lỗi", "Email này đã được sử dụng!");
+      const existingUser = await getUserByEmail(email);
+      if (existingUser) return Alert.alert("Lỗi", "Email đã được sử dụng!");
 
-      const newUserProfile = {
-        name,
-        email,
-        password,
-        address: "",
-        avatarUrl: "",
-        description: "",
-      };
-      await AsyncStorage.setItem(
-        `profile_${email}`,
-        JSON.stringify(newUserProfile),
-      );
-
-      Alert.alert(
-        "Thành công",
-        "Tạo tài khoản thành công! Vui lòng cập nhật thông tin.",
-        [
-          {
-            text: "Tiếp tục",
-            onPress: () =>
-              router.replace({ pathname: "/setup-profile", params: { email } }),
-          },
-        ],
-      );
+      await createUser(name, email, password); // <-- Lưu vào SQLite
+      Alert.alert("Thành công", "Tạo tài khoản thành công!", [
+        {
+          text: "Tiếp tục",
+          onPress: () =>
+            router.replace({ pathname: "/setup-profile", params: { email } }),
+        },
+      ]);
     } catch (error) {
-      Alert.alert("Lỗi", "Đã xảy ra lỗi khi tạo tài khoản.");
+      Alert.alert("Lỗi", "Đã xảy ra lỗi.");
     }
   };
 
@@ -97,7 +80,6 @@ export default function RegisterScreen() {
     </View>
   );
 }
-// Giữ nguyên StyleSheet như file cũ của bạn
 const styles = StyleSheet.create({
   container: {
     flex: 1,

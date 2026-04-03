@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { getUserByEmail, updateUserProfile } from "../database";
 
 export default function ProfileScreen() {
   const [name, setName] = useState("");
@@ -18,22 +19,19 @@ export default function ProfileScreen() {
   const [address, setAddress] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [description, setDescription] = useState("");
-  const [password, setPassword] = useState(""); // Cần giữ để không bị mất khi save đè
 
   useFocusEffect(
     useCallback(() => {
       const loadData = async () => {
         const currentEmail = await AsyncStorage.getItem("currentUser");
         if (currentEmail) {
-          const data = await AsyncStorage.getItem(`profile_${currentEmail}`);
-          if (data) {
-            const parsed = JSON.parse(data);
-            setName(parsed.name || "");
-            setEmail(parsed.email || "");
-            setAddress(parsed.address || "");
-            setAvatarUrl(parsed.avatarUrl || "");
-            setDescription(parsed.description || "");
-            setPassword(parsed.password);
+          const user = await getUserByEmail(currentEmail);
+          if (user) {
+            setName(user.name || "");
+            setEmail(user.email || "");
+            setAddress(user.address || "");
+            setAvatarUrl(user.avatarUrl || "");
+            setDescription(user.description || "");
           }
         }
       };
@@ -43,18 +41,7 @@ export default function ProfileScreen() {
 
   const handleSave = async () => {
     try {
-      const profileData = {
-        name,
-        email,
-        password,
-        address,
-        avatarUrl,
-        description,
-      };
-      await AsyncStorage.setItem(
-        `profile_${email}`,
-        JSON.stringify(profileData),
-      );
+      await updateUserProfile(email, name, address, avatarUrl, description);
       Alert.alert("Thành công", "Đã cập nhật hồ sơ!");
     } catch (error) {
       Alert.alert("Lỗi", "Đã xảy ra lỗi khi lưu.");
@@ -62,7 +49,10 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: 40 }}
+    >
       <View style={styles.headerContainer}>
         <Text style={styles.title}>{name ? `${name}!` : "Profile!"}</Text>
         {avatarUrl ? (
@@ -73,7 +63,6 @@ export default function ProfileScreen() {
           </View>
         )}
       </View>
-
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Name</Text>
         <TextInput style={styles.input} value={name} onChangeText={setName} />
@@ -113,14 +102,12 @@ export default function ProfileScreen() {
           numberOfLines={4}
         />
       </View>
-
       <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
         <Text style={styles.saveButtonText}>SAVE</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 }
-
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#f5f5f5" },
   headerContainer: {
@@ -128,7 +115,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 30,
-    marginTop: 20,
+    marginTop: 40,
   },
   title: { fontSize: 28, fontWeight: "bold" },
   avatarPlaceholder: {
@@ -139,23 +126,24 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#fff",
   },
   avatarImage: { width: 60, height: 60, borderRadius: 8 },
   inputGroup: { marginBottom: 15 },
-  label: { fontSize: 14, marginBottom: 5, color: "#555" },
+  label: { fontSize: 14, marginBottom: 5, color: "#555", fontWeight: "600" },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
     padding: 10,
-    borderRadius: 2,
+    borderRadius: 6,
     backgroundColor: "#fff",
   },
   textArea: { height: 80, textAlignVertical: "top" },
   saveButton: {
     backgroundColor: "#4285F4",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 2,
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 6,
     alignSelf: "flex-start",
     marginTop: 10,
   },

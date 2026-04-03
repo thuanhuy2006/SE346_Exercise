@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { getUserByEmail } from "./database"; // <-- Import SQLite
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -17,24 +18,15 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     if (!email) return Alert.alert("Thông báo", "Vui lòng nhập email!");
     try {
-      const storedUser = await AsyncStorage.getItem(`profile_${email}`);
-      if (storedUser !== null) {
-        const userData = JSON.parse(storedUser);
-        if (userData.password && userData.password !== password) {
+      const user = await getUserByEmail(email); // <-- Tra cứu từ SQLite
+      if (user) {
+        if (user.password !== password)
           return Alert.alert("Lỗi", "Mật khẩu không chính xác!");
-        }
-        // Lưu phiên đăng nhập hiện tại
-        await AsyncStorage.setItem("currentUser", email);
+
+        await AsyncStorage.setItem("currentUser", email); // Lưu phiên
         router.replace("/(tabs)/home");
       } else {
-        Alert.alert(
-          "Tài khoản không tồn tại",
-          "Email này chưa được đăng ký. Tạo tài khoản mới?",
-          [
-            { text: "Hủy", style: "cancel" },
-            { text: "Đăng ký ngay", onPress: () => router.push("/register") },
-          ],
-        );
+        Alert.alert("Lỗi", "Tài khoản không tồn tại!");
       }
     } catch (error) {
       Alert.alert("Lỗi", "Đã xảy ra lỗi khi đăng nhập.");
@@ -75,7 +67,6 @@ export default function LoginScreen() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

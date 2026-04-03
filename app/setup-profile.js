@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -10,43 +9,29 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { getUserByEmail, updateUserProfile } from "./database";
 
 export default function SetupProfileScreen() {
-  const params = useLocalSearchParams();
-  const email = params.email;
+  const { email } = useLocalSearchParams();
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [description, setDescription] = useState("");
-  const [password, setPassword] = useState(""); // Giữ lại password cũ
 
   useEffect(() => {
     const loadData = async () => {
-      const data = await AsyncStorage.getItem(`profile_${email}`);
-      if (data) {
-        const parsed = JSON.parse(data);
-        setName(parsed.name || "");
-        setPassword(parsed.password);
+      if (email) {
+        const user = await getUserByEmail(email);
+        if (user) setName(user.name || "");
       }
     };
     loadData();
-  }, []);
+  }, [email]);
 
   const handleSave = async () => {
     try {
-      const profileData = {
-        name,
-        email,
-        password,
-        address,
-        avatarUrl,
-        description,
-      };
-      await AsyncStorage.setItem(
-        `profile_${email}`,
-        JSON.stringify(profileData),
-      );
-      Alert.alert("Thành công", "Đã lưu hồ sơ! Vui lòng đăng nhập.", [
+      await updateUserProfile(email, name, address, avatarUrl, description);
+      Alert.alert("Thành công", "Đã lưu hồ sơ!", [
         { text: "Đăng nhập", onPress: () => router.replace("/") },
       ]);
     } catch (error) {
@@ -60,7 +45,6 @@ export default function SetupProfileScreen() {
       contentContainerStyle={{ paddingBottom: 40 }}
     >
       <Text style={styles.title}>Thiết lập hồ sơ</Text>
-      {/* Các Input tương tự file profile của bạn */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Name</Text>
         <TextInput style={styles.input} value={name} onChangeText={setName} />

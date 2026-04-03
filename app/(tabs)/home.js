@@ -10,14 +10,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { createPost, getAllPosts } from "../database";
 
 export default function HomeScreen() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [posts, setPosts] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentEmail, setCurrentEmail] = useState("");
 
-  // Dùng useFocusEffect để load lại data mỗi khi chuyển tab về Home
   useFocusEffect(
     useCallback(() => {
       loadData();
@@ -27,12 +27,9 @@ export default function HomeScreen() {
   const loadData = async () => {
     try {
       const email = await AsyncStorage.getItem("currentUser");
-      if (email) {
-        const userStr = await AsyncStorage.getItem(`profile_${email}`);
-        if (userStr) setCurrentUser(JSON.parse(userStr));
-      }
-      const postsStr = await AsyncStorage.getItem("allPosts");
-      if (postsStr) setPosts(JSON.parse(postsStr));
+      if (email) setCurrentEmail(email);
+      const dbPosts = await getAllPosts();
+      setPosts(dbPosts);
     } catch (e) {
       console.error(e);
     }
@@ -40,21 +37,19 @@ export default function HomeScreen() {
 
   const handlePost = async () => {
     if (!title || !content) return;
-    const newPost = {
-      id: Date.now().toString(),
-      title,
-      content,
-      authorName: currentUser?.name || "Anonymous",
-      authorEmail: currentUser?.email || "",
-      authorAvatar: currentUser?.avatarUrl || "",
-      timestamp: new Date().toLocaleString(),
-    };
-
-    const updatedPosts = [newPost, ...posts];
-    setPosts(updatedPosts);
-    await AsyncStorage.setItem("allPosts", JSON.stringify(updatedPosts));
-    setTitle("");
-    setContent("");
+    try {
+      await createPost(
+        title,
+        content,
+        currentEmail,
+        new Date().toLocaleString(),
+      );
+      setTitle("");
+      setContent("");
+      loadData();
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const renderPost = ({ item }) => (
@@ -77,7 +72,9 @@ export default function HomeScreen() {
           </View>
         )}
         <View style={styles.authorInfo}>
-          <Text style={styles.authorName}>{item.authorName}</Text>
+          <Text style={styles.authorName}>
+            {item.authorName || "Anonymous"}
+          </Text>
           <Text style={styles.authorEmail}>{item.authorEmail}</Text>
         </View>
         <Text style={styles.timestamp}>{item.timestamp}</Text>
@@ -108,10 +105,9 @@ export default function HomeScreen() {
           <Text style={styles.postButtonText}>Post</Text>
         </TouchableOpacity>
       </View>
-
       <FlatList
         data={posts}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={renderPost}
         contentContainerStyle={{ paddingBottom: 20 }}
         showsVerticalScrollIndicator={false}
@@ -119,7 +115,6 @@ export default function HomeScreen() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f5f5", padding: 15 },
   createPostCard: {
