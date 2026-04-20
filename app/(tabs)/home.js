@@ -2,15 +2,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
+  Alert,
   FlatList,
-  Image,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { createPost, getAllPosts } from "../database";
+import { apiCreatePost, apiDeletePost, apiGetAllPosts } from "../api";
 
 export default function HomeScreen() {
   const [title, setTitle] = useState("");
@@ -27,8 +27,10 @@ export default function HomeScreen() {
   const loadData = async () => {
     try {
       const email = await AsyncStorage.getItem("currentUser");
-      if (email) setCurrentEmail(email);
-      const dbPosts = await getAllPosts();
+      setCurrentEmail(email);
+
+      // Gọi API lấy bài viết
+      const dbPosts = await apiGetAllPosts();
       setPosts(dbPosts);
     } catch (e) {
       console.error(e);
@@ -38,49 +40,42 @@ export default function HomeScreen() {
   const handlePost = async () => {
     if (!title || !content) return;
     try {
-      await createPost(
-        title,
-        content,
-        currentEmail,
-        new Date().toLocaleString(),
-      );
+      // API yêu cầu trường description (tương đương với content của bạn)
+      await apiCreatePost(title, content, currentEmail);
       setTitle("");
       setContent("");
+      loadData(); // Tải lại danh sách
+    } catch (error) {
+      Alert.alert("Lỗi", "Không thể đăng bài");
+    }
+  };
+
+  const handleDelete = async (postId) => {
+    try {
+      await apiDeletePost(postId);
       loadData();
     } catch (error) {
-      console.error(error);
+      Alert.alert("Lỗi", "Không thể xóa");
     }
   };
 
   const renderPost = ({ item }) => (
     <View style={styles.postCard}>
       <View style={styles.postHeader}>
-        {item.authorAvatar ? (
-          <Image source={{ uri: item.authorAvatar }} style={styles.avatar} />
-        ) : (
-          <View
-            style={[
-              styles.avatar,
-              {
-                backgroundColor: "#ccc",
-                justifyContent: "center",
-                alignItems: "center",
-              },
-            ]}
-          >
-            <Text>👤</Text>
-          </View>
-        )}
         <View style={styles.authorInfo}>
-          <Text style={styles.authorName}>
-            {item.authorName || "Anonymous"}
-          </Text>
-          <Text style={styles.authorEmail}>{item.authorEmail}</Text>
+          {/* API có trả về creator_email */}
+          <Text style={styles.authorEmail}>{item.creator_email}</Text>
         </View>
-        <Text style={styles.timestamp}>{item.timestamp}</Text>
+        {/* Nút xóa bài (Chỉ hiện nếu đúng là bài của người đang đăng nhập) */}
+        {currentEmail === item.creator_email && (
+          <TouchableOpacity onPress={() => handleDelete(item.id)}>
+            <Text style={{ color: "red" }}>Xóa</Text>
+          </TouchableOpacity>
+        )}
       </View>
       <Text style={styles.postTitle}>{item.title}</Text>
-      <Text style={styles.postContent}>{item.content}</Text>
+      {/* Trong API, nội dung bài viết nằm ở biến 'description' */}
+      <Text style={styles.postContent}>{item.description}</Text>
     </View>
   );
 
@@ -115,6 +110,8 @@ export default function HomeScreen() {
     </View>
   );
 }
+
+// ... Giữ styles như cũ ...
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f5f5", padding: 15 },
   createPostCard: {
@@ -150,8 +147,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ddd",
   },
-  postHeader: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
-  avatar: { width: 40, height: 40, borderRadius: 20, marginRight: 10 },
+  postHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+    justifyContent: "space-between",
+  },
   authorInfo: { flex: 1 },
   authorName: { fontWeight: "bold", fontSize: 14 },
   authorEmail: { color: "gray", fontSize: 12 },

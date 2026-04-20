@@ -3,7 +3,6 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   Alert,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,13 +10,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { getUserByEmail, updateUserProfile } from "../database";
+import { apiGetProfile } from "../api";
 
 export default function ProfileScreen() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [address, setAddress] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
   const [description, setDescription] = useState("");
 
   useFocusEffect(
@@ -25,13 +22,14 @@ export default function ProfileScreen() {
       const loadData = async () => {
         const currentEmail = await AsyncStorage.getItem("currentUser");
         if (currentEmail) {
-          const user = await getUserByEmail(currentEmail);
-          if (user) {
-            setName(user.name || "");
-            setEmail(user.email || "");
-            setAddress(user.address || "");
-            setAvatarUrl(user.avatarUrl || "");
-            setDescription(user.description || "");
+          try {
+            // Lấy thông tin từ Server
+            const userData = await apiGetProfile(currentEmail);
+            setName(userData.name || "");
+            setEmail(userData.email || currentEmail);
+            setDescription(userData.description || "");
+          } catch (error) {
+            console.log("Chưa có profile API");
           }
         }
       };
@@ -39,13 +37,12 @@ export default function ProfileScreen() {
     }, []),
   );
 
-  const handleSave = async () => {
-    try {
-      await updateUserProfile(email, name, address, avatarUrl, description);
-      Alert.alert("Thành công", "Đã cập nhật hồ sơ!");
-    } catch (error) {
-      Alert.alert("Lỗi", "Đã xảy ra lỗi khi lưu.");
-    }
+  const handleSave = () => {
+    // Tài liệu API chưa cung cấp Endpoint để UPDATE profile
+    Alert.alert(
+      "Tính năng chưa hỗ trợ",
+      "API chưa có Endpoint để cập nhật Profile.",
+    );
   };
 
   return (
@@ -55,17 +52,14 @@ export default function ProfileScreen() {
     >
       <View style={styles.headerContainer}>
         <Text style={styles.title}>{name ? `${name}!` : "Profile!"}</Text>
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Text style={{ fontSize: 20 }}>🖼️</Text>
-          </View>
-        )}
+        <View style={styles.avatarPlaceholder}>
+          <Text style={{ fontSize: 20 }}>🖼️</Text>
+        </View>
       </View>
+
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Name</Text>
-        <TextInput style={styles.input} value={name} onChangeText={setName} />
+        <TextInput style={styles.input} value={name} editable={false} />
       </View>
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Email</Text>
@@ -76,38 +70,23 @@ export default function ProfileScreen() {
         />
       </View>
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Address</Text>
-        <TextInput
-          style={styles.input}
-          value={address}
-          onChangeText={setAddress}
-        />
-      </View>
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Avatar URL</Text>
-        <TextInput
-          style={styles.input}
-          value={avatarUrl}
-          onChangeText={setAvatarUrl}
-          autoCapitalize="none"
-        />
-      </View>
-      <View style={styles.inputGroup}>
         <Text style={styles.label}>Description</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
           value={description}
-          onChangeText={setDescription}
+          editable={false}
           multiline
           numberOfLines={4}
         />
       </View>
+
       <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
         <Text style={styles.saveButtonText}>SAVE</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 }
+
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#f5f5f5" },
   headerContainer: {

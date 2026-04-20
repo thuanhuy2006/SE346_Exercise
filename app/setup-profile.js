@@ -9,34 +9,35 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { getUserByEmail, updateUserProfile } from "./database";
+import { apiGetProfile } from "./api"; // Đổi import database thành api
 
 export default function SetupProfileScreen() {
   const { email } = useLocalSearchParams();
   const [name, setName] = useState("");
-  const [address, setAddress] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
   const [description, setDescription] = useState("");
 
   useEffect(() => {
     const loadData = async () => {
       if (email) {
-        const user = await getUserByEmail(email);
-        if (user) setName(user.name || "");
+        try {
+          const user = await apiGetProfile(email);
+          if (user) {
+            setName(user.name || "");
+            setDescription(user.description || "");
+          }
+        } catch (error) {
+          console.log("Không lấy được dữ liệu từ API:", error);
+        }
       }
     };
     loadData();
   }, [email]);
 
-  const handleSave = async () => {
-    try {
-      await updateUserProfile(email, name, address, avatarUrl, description);
-      Alert.alert("Thành công", "Đã lưu hồ sơ!", [
-        { text: "Đăng nhập", onPress: () => router.replace("/") },
-      ]);
-    } catch (error) {
-      Alert.alert("Lỗi", "Lỗi lưu thông tin.");
-    }
+  const handleSave = () => {
+    // Không có API update, chỉ chuyển người dùng về trang Đăng nhập
+    Alert.alert("Hoàn tất", "Trở về trang Đăng nhập", [
+      { text: "OK", onPress: () => router.replace("/") },
+    ]);
   };
 
   return (
@@ -44,11 +45,17 @@ export default function SetupProfileScreen() {
       style={styles.container}
       contentContainerStyle={{ paddingBottom: 40 }}
     >
-      <Text style={styles.title}>Thiết lập hồ sơ</Text>
+      <Text style={styles.title}>Hồ sơ của bạn</Text>
+
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Name</Text>
-        <TextInput style={styles.input} value={name} onChangeText={setName} />
+        <TextInput
+          style={[styles.input, { backgroundColor: "#f0f0f0" }]}
+          value={name}
+          editable={false}
+        />
       </View>
+
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Email</Text>
         <TextInput
@@ -57,38 +64,24 @@ export default function SetupProfileScreen() {
           editable={false}
         />
       </View>
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Address</Text>
-        <TextInput
-          style={styles.input}
-          value={address}
-          onChangeText={setAddress}
-        />
-      </View>
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Avatar URL</Text>
-        <TextInput
-          style={styles.input}
-          value={avatarUrl}
-          onChangeText={setAvatarUrl}
-          autoCapitalize="none"
-        />
-      </View>
+
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Description</Text>
         <TextInput
-          style={[styles.input, { height: 80 }]}
+          style={[styles.input, { height: 80, backgroundColor: "#f0f0f0" }]}
           value={description}
-          onChangeText={setDescription}
+          editable={false}
           multiline
         />
       </View>
+
       <TouchableOpacity style={styles.button} onPress={handleSave}>
-        <Text style={styles.buttonText}>Hoàn tất</Text>
+        <Text style={styles.buttonText}>Về trang Đăng nhập</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 }
+
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 30, backgroundColor: "#fff" },
   title: { fontSize: 24, fontWeight: "bold", marginBottom: 20, marginTop: 40 },

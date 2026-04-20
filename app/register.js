@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { createUser, getUserByEmail } from "./database";
+import { apiRegister } from "./api"; // Nhúng API
 
 export default function RegisterScreen() {
   const [name, setName] = useState("");
@@ -17,28 +17,24 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const handleRegister = async () => {
-    if (!email || !password)
-      return Alert.alert("Thông báo", "Vui lòng nhập email và mật khẩu!");
+    if (!email || !password || !name)
+      return Alert.alert("Thông báo", "Nhập đủ Tên, Email và Mật khẩu!");
     if (password !== confirmPassword)
-      return Alert.alert("Lỗi", "Mật khẩu không khớp!");
+      return Alert.alert("Lỗi", "Mật khẩu xác nhận không khớp!");
 
     try {
-      const existingUser = await getUserByEmail(email);
-      if (existingUser) return Alert.alert("Lỗi", "Email đã được sử dụng!");
+      // Gọi API tạo tài khoản (description mặc định rỗng)
+      await apiRegister(email, password, name, "New User");
 
-      await createUser(name, email, password); // <-- Lưu vào SQLite
       Alert.alert("Thành công", "Tạo tài khoản thành công!", [
-        {
-          text: "Tiếp tục",
-          onPress: () =>
-            router.replace({ pathname: "/setup-profile", params: { email } }),
-        },
+        { text: "Đăng nhập ngay", onPress: () => router.back() },
       ]);
     } catch (error) {
-      Alert.alert("Lỗi", "Đã xảy ra lỗi.");
+      Alert.alert("Lỗi", "Email đã tồn tại hoặc lỗi máy chủ!");
     }
   };
 
+  // ... (Giao diện return và styles giữ nguyên như cũ của bạn)
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Register</Text>

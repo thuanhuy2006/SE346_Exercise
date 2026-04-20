@@ -9,27 +9,25 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { getUserByEmail } from "./database"; // <-- Import SQLite
+import { apiLogin } from "./api"; // Nhúng API
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const handleLogin = async () => {
-    if (!email) return Alert.alert("Thông báo", "Vui lòng nhập email!");
-    try {
-      const user = await getUserByEmail(email); // <-- Tra cứu từ SQLite
-      if (user) {
-        if (user.password !== password)
-          return Alert.alert("Lỗi", "Mật khẩu không chính xác!");
+    if (!email || !password)
+      return Alert.alert("Thông báo", "Vui lòng nhập đủ thông tin!");
 
-        await AsyncStorage.setItem("currentUser", email); // Lưu phiên
-        router.replace("/(tabs)/home");
-      } else {
-        Alert.alert("Lỗi", "Tài khoản không tồn tại!");
-      }
+    try {
+      // Gọi API Đăng nhập
+      await apiLogin(email, password);
+
+      // Nếu không bị văng lỗi (catch), nghĩa là đăng nhập thành công
+      await AsyncStorage.setItem("currentUser", email); // Lưu phiên đăng nhập cục bộ
+      router.replace("/(tabs)/home");
     } catch (error) {
-      Alert.alert("Lỗi", "Đã xảy ra lỗi khi đăng nhập.");
+      Alert.alert("Lỗi", error.message || "Không thể đăng nhập");
     }
   };
 
@@ -67,6 +65,8 @@ export default function LoginScreen() {
     </View>
   );
 }
+
+// ... (Giữ nguyên styles cũ của bạn)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
